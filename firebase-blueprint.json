@@ -1,0 +1,67 @@
+{
+  "entities": {
+    "Simulation": {
+      "title": "Simulation",
+      "description": "Master configuration and analytics for a traffic simulation instance.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "status": { "type": "string", "enum": ["active", "paused"] },
+        "config": {
+          "type": "object",
+          "properties": {
+            "spawnRate": { "type": "number" },
+            "simulationSpeed": { "type": "number" }
+          }
+        },
+        "stats": {
+          "type": "object",
+          "properties": {
+            "activeVehiclesCount": { "type": "integer" },
+            "totalSpawned": { "type": "integer" },
+            "avgEfficiency": { "type": "number" }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "status"]
+    },
+    "TrafficLight": {
+      "title": "Traffic Light",
+      "description": "Represents the state of a traffic light at an intersection.",
+      "type": "object",
+      "properties": {
+        "intersectionId": { "type": "string" },
+        "state": { "type": "string", "enum": ["RED", "YELLOW", "GREEN"] },
+        "duration": { "type": "integer" },
+        "lastChanged": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Vehicle": {
+      "title": "Vehicle",
+      "description": "Transient state of a vehicle in the simulation.",
+      "type": "object",
+      "properties": {
+        "posX": { "type": "number" },
+        "posY": { "type": "number" },
+        "speed": { "type": "number" },
+        "laneId": { "type": "string" },
+        "targetIntersectionId": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/simulations/{simId}": {
+      "schema": "Simulation",
+      "description": "Root simulation documents"
+    },
+    "/simulations/{simId}/trafficLights/{lightId}": {
+      "schema": "TrafficLight",
+      "description": "Traffic light states for a simulation"
+    },
+    "/simulations/{simId}/vehicles/{vehicleId}": {
+      "schema": "Vehicle",
+      "description": "Real-time vehicle positions (high churn)"
+    }
+  }
+}

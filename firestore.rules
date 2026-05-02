@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(data) {
+      return isSignedIn() && data.ownerId == request.auth.uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+
+    function isValidSimulation(data) {
+      return data.keys().hasAll(['name', 'status', 'ownerId', 'updatedAt']) &&
+             data.keys().size() <= 6 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.status in ['active', 'paused'] &&
+             data.ownerId == request.auth.uid &&
+             data.updatedAt == request.time &&
+             (data.keys().hasAny(['config']) ? (
+               data.config is map &&
+               data.config.get('spawnRate', 0) is number &&
+               data.config.get('simulationSpeed', 0) is number
+             ) : true);
+    }
+
+    function isValidTrafficLight(data) {
+      return data.keys().hasAll(['intersectionId', 'state', 'lastChanged']) &&
+             data.state in ['RED', 'YELLOW', 'GREEN'] &&
+             data.intersectionId is string &&
+             data.lastChanged == request.time;
+    }
+
+    function isValidVehicle(data) {
+      return data.keys().hasAll(['posX', 'posY', 'speed', 'laneId']) &&
+             data.posX is number && data.posY is number &&
+             data.speed is number && data.laneId is string;
+    }
+
+    // --- Rules ---
+
+    match /simulations/{simId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn() && resource.data.ownerId == request.auth.uid;
+      
+      allow create: if isSignedIn() && isValidId(simId) && isValidSimulation(incoming());
+      
+      allow update: if isOwner(existing()) && isValidSimulation(incoming()) && (
+        // Action: Generic update
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'status', 'config', 'updatedAt', 'stats'])
+      );
+      
+      allow delete: if isOwner(existing());
+
+      match /trafficLights/{lightId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && get(/databases/$(database)/documents/simulations/$(simId)).data.ownerId == request.auth.uid &&
+                      isValidTrafficLight(incoming());
+      }
+
+      match /vehicles/{vehicleId} {
+        allow read: if isSignedIn();
+        allow create: if isSignedIn() && isValidVehicle(incoming());
+        allow update: if isSignedIn() && isValidVehicle(incoming());
+        allow delete: if isSignedIn();
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "UrbanFlow AI: Traffic Sim",
+  "description": "A real-time traffic simulation dashboard with multi-user sync, intelligent traffic light control, and performance analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Real-time Traffic Simulation", "Multi-user Data Sync", "Autonomous Traffic Light Control", "Performance Analytics Dashboard"]
+}
